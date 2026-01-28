@@ -1,0 +1,81 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: phase5-config
+  namespace: default
+spec:
+  # Tracing configuration for observability
+  tracing:
+    samplingRate: "1"
+    otel:
+      isSecure: false
+      protocol: grpc
+      endpointAddress: "localhost:4317"
+
+  # Metrics configuration
+  metrics:
+    enabled: true
+    rules:
+      - name: phase5_requests
+        labels:
+          - name: method
+          - name: path
+          - name: status
+      - name: phase5_pubsub
+        labels:
+          - name: topic
+          - name: success
+
+  # Middleware pipeline
+  httpPipeline:
+    handlers:
+      - name: ratelimit
+        type: middleware.http.ratelimit
+        version: v1
+      - name: uppercase
+        type: middleware.http.uppercase
+        version: v1
+
+  # Access control for service invocation
+  accessControl:
+    defaultAction: allow
+    trustDomain: "public"
+    policies:
+      - appId: chatbot
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "default"
+        operations:
+          - name: /health
+            httpVerb: ["GET"]
+            action: allow
+          - name: /*
+            httpVerb: ["*"]
+            action: allow
+
+      - appId: task-service
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "default"
+
+      - appId: reminder-service
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "default"
+
+      - appId: recurrence-service
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "default"
+
+      - appId: audit-service
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "default"
+
+  # Feature flags
+  features:
+    - name: ServiceInvocationStreaming
+      enabled: true
+    - name: HotReload
+      enabled: true

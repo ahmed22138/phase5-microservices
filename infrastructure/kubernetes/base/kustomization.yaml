@@ -1,0 +1,17 @@
+# Base Kustomization - All Services
+# Phase V Chatbot Task Management
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: phase5
+
+resources:
+  - chatbot/
+  - task-service/
+  - reminder-service/
+  - recurrence-service/
+  - audit-service/
+
+commonLabels:
+  app.kubernetes.io/part-of: phase5-chatbot
+  app.kubernetes.io/managed-by: kustomize

@@ -1,0 +1,31 @@
+{
+  "name": "@phase5/monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Phase V Chatbot Task Management Extensions",
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "lint": "eslint 'services/*/src/**/*.ts'",
+    "lint:fix": "eslint 'services/*/src/**/*.ts' --fix",
+    "format": "prettier --write 'services/*/src/**/*.ts'",
+    "format:check": "prettier --check 'services/*/src/**/*.ts'",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-import": "^2.32.0",
+    "prettier": "^3.1.0",
+    "typescript-eslint": "^8.53.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

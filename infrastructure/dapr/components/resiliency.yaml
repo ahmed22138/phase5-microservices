@@ -1,0 +1,87 @@
+apiVersion: dapr.io/v1alpha1
+kind: Resiliency
+metadata:
+  name: phase5-resiliency
+  namespace: default
+spec:
+  # Policy definitions
+  policies:
+    # Retry policies
+    retries:
+      # Default retry for pub/sub operations
+      pubsubRetry:
+        policy: constant
+        duration: 1s
+        maxRetries: 3
+
+      # Retry for service invocations
+      serviceRetry:
+        policy: exponential
+        maxInterval: 15s
+        maxRetries: 5
+
+      # Aggressive retry for critical operations
+      criticalRetry:
+        policy: exponential
+        maxInterval: 30s
+        maxRetries: 10
+
+    # Timeout policies
+    timeouts:
+      # Default timeout for service calls
+      defaultTimeout: 10s
+      # Short timeout for health checks
+      healthTimeout: 2s
+      # Long timeout for database operations
+      dbTimeout: 30s
+
+    # Circuit breaker policies
+    circuitBreakers:
+      # Default circuit breaker
+      defaultCB:
+        maxRequests: 1
+        interval: 60s
+        timeout: 30s
+        trip: consecutiveFailures >= 5
+
+      # Strict circuit breaker for external services
+      strictCB:
+        maxRequests: 1
+        interval: 30s
+        timeout: 15s
+        trip: consecutiveFailures >= 3
+
+  # Apply policies to targets
+  targets:
+    # Apps (service-to-service)
+    apps:
+      task-service:
+        retry: serviceRetry
+        timeout: defaultTimeout
+        circuitBreaker: defaultCB
+
+      reminder-service:
+        retry: serviceRetry
+        timeout: defaultTimeout
+        circuitBreaker: defaultCB
+
+      recurrence-service:
+        retry: serviceRetry
+        timeout: defaultTimeout
+        circuitBreaker: defaultCB
+
+      audit-service:
+        retry: serviceRetry
+        timeout: defaultTimeout
+        circuitBreaker: defaultCB
+
+    # Components (pub/sub, state stores)
+    components:
+      pubsub:
+        outbound:
+          retry: pubsubRetry
+          timeout: defaultTimeout
+          circuitBreaker: defaultCB
+        inbound:
+          retry: pubsubRetry
+          timeout: defaultTimeout

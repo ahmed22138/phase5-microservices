@@ -1,0 +1,273 @@
+openapi: 3.1.0
+info:
+  title: Recurrence Service API
+  version: 1.0.0
+  description: |
+    Internal API for the Recurrence Service. Manages recurring task patterns
+    and generates task instances when schedules trigger.
+
+servers:
+  - url: http://localhost:3500/v1.0/invoke/recurrence-service/method
+    description: Dapr sidecar (local development)
+
+paths:
+  /recurrence/{taskId}:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The template task ID
+
+    get:
+      operationId: getRecurrence
+      summary: Get recurrence pattern for a task
+      tags: [Recurrence]
+      responses:
+        '200':
+          description: Recurrence pattern
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurrenceInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateRecurrence
+      summary: Update recurrence pattern
+      tags: [Recurrence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecurrenceRequest'
+      responses:
+        '200':
+          description: Recurrence updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurrenceInfo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: stopRecurrence
+      summary: Stop recurrence (permanently)
+      tags: [Recurrence]
+      responses:
+        '204':
+          description: Recurrence stopped
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /recurrence/{taskId}/pause:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      operationId: pauseRecurrence
+      summary: Pause recurrence temporarily
+      tags: [Recurrence]
+      responses:
+        '200':
+          description: Recurrence paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurrenceInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Already paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /recurrence/{taskId}/resume:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      operationId: resumeRecurrence
+      summary: Resume paused recurrence
+      tags: [Recurrence]
+      responses:
+        '200':
+          description: Recurrence resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurrenceInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Not paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /recurrence:
+    get:
+      operationId: listRecurrences
+      summary: List all recurrence patterns for user
+      tags: [Recurrence]
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RecurrenceStatus'
+      responses:
+        '200':
+          description: List of recurrence patterns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurrenceListResponse'
+
+components:
+  parameters:
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Frequency:
+      type: string
+      enum: [daily, weekly, monthly, yearly]
+
+    RecurrenceStatus:
+      type: string
+      enum: [active, paused, completed]
+
+    RecurrencePattern:
+      type: object
+      required:
+        - frequency
+      properties:
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        interval:
+          type: integer
+          minimum: 1
+          default: 1
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          description: 0=Sunday, 6=Saturday (for weekly frequency)
+        dayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: Day of month (for monthly frequency)
+        endDate:
+          type: string
+          format: date-time
+          description: When recurrence should stop (optional)
+
+    RecurrenceInfo:
+      type: object
+      required:
+        - id
+        - taskId
+        - userId
+        - pattern
+        - status
+        - nextRunAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+        status:
+          $ref: '#/components/schemas/RecurrenceStatus'
+        nextRunAt:
+          type: string
+          format: date-time
+        lastTriggeredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateRecurrenceRequest:
+      type: object
+      properties:
+        pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+
+    RecurrenceListResponse:
+      type: object
+      required:
+        - recurrences
+      properties:
+        recurrences:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurrenceInfo'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

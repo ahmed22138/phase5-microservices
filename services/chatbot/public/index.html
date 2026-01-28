@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 5 - Task AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0d0d0d;
+      --bg-secondary: #1a1a1a;
+      --bg-tertiary: #262626;
+      --bg-hover: #2f2f2f;
+      --border-color: #333;
+      --text-primary: #ececec;
+      --text-secondary: #9a9a9a;
+      --accent: #10a37f;
+      --accent-hover: #1a7f64;
+      --user-msg: #2f2f2f;
+      --bot-msg: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .logo-badge {
+      background: var(--bg-tertiary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Main Chat Area */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+      padding-top: 60px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 180px;
+    }
+
+    .message {
+      padding: 20px 0;
+      display: flex;
+      gap: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .message.user .message-avatar {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    .message.bot .message-avatar {
+      background: var(--accent);
+    }
+
+    .message-content {
+      flex: 1;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .message.user {
+      background: var(--user-msg);
+      border-radius: 12px;
+      margin: 8px 0;
+      padding: 20px;
+    }
+
+    /* Task Cards */
+    .task-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0;
+      transition: all 0.2s;
+    }
+
+    .task-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .task-title {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .task-priority {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .task-priority.urgent { background: #dc2626; color: white; }
+    .task-priority.high { background: #ea580c; color: white; }
+    .task-priority.medium { background: #2563eb; color: white; }
+    .task-priority.low { background: #6b7280; color: white; }
+
+    .task-meta {
+      display: flex;
+      gap: 16px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .task-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      background: var(--accent);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .task-id {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Input Area */
+    .input-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, var(--bg-primary) 20%);
+      padding: 20px;
+      padding-top: 40px;
+    }
+
+    .input-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quick-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .quick-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+    }
+
+    .input-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 4px;
+      transition: border-color 0.2s;
+    }
+
+    .input-box:focus-within {
+      border-color: var(--accent);
+    }
+
+    .input-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .input-box input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-right: 4px;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-hover);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      background: var(--bg-tertiary);
+      cursor: not-allowed;
+    }
+
+    .send-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Success/Error Messages */
+    .success-msg {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .error-msg {
+      color: #ef4444;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--bg-hover);
+    }
+
+    /* Welcome Screen */
+    .welcome {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .welcome-icon {
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+    }
+
+    .welcome h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .welcome p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      max-width: 500px;
+      margin: 0 auto 30px;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .suggestion {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent);
+    }
+
+    .suggestion-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .suggestion-desc {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    /* Typing Indicator */
+    .typing {
+      display: flex;
+      gap: 4px;
+      padding: 8px 0;
+    }
+
+    .typing span {
+      width: 8px;
+      height: 8px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(1) { animation-delay: -0.32s; }
+    .typing span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .chat-messages { padding: 16px; }
+      .message { padding: 16px 0; gap: 12px; }
+      .suggestions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">P5</div>
+      <span class="logo-text">Task AI</span>
+      <span class="logo-badge">Phase 5</span>
+    </div>
+  </div>
+
+  <!-- Chat Container -->
+  <div class="chat-container">
+    <div class="chat-messages" id="chatMessages">
+      <!-- Welcome Screen -->
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">✨</div>
+        <h2>Task AI Assistant</h2>
+        <p>I can help you manage tasks with natural language. Create, organize, search, and track your tasks effortlessly.</p>
+
+        <div class="suggestions">
+          <div class="suggestion" onclick="sendMessage('Create task Review project docs with high priority')">
+            <div class="suggestion-title">📝 Create a task</div>
+            <div class="suggestion-desc">"Create task Review docs with high priority"</div>
+          </div>
+          <div class="suggestion" onclick="sendMessage('Show my tasks')">
+            <div class="suggestion-title">📋 View all tasks</div>
+            <div class="suggestion-desc">"Show my tasks"</div>
+          </div>
+          <div class="suggestion" onclick="sendMessage('Show urgent tasks')">
+            <div class="suggestion-title">🔥 Filter by priority</div>
+            <div class="suggestion-desc">"Show urgent tasks"</div>
+          </div>
+          <div class="suggestion" onclick="sendMessage('help')">
+            <div class="suggestion-title">❓ See all commands</div>
+            <div class="suggestion-desc">"help"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="input-container">
+    <div class="input-wrapper">
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="sendMessage('Show my tasks')">📋 Tasks</button>
+        <button class="quick-btn" onclick="sendMessage('Show urgent tasks')">🔥 Urgent</button>
+        <button class="quick-btn" onclick="sendMessage('Show all tags')">🏷️ Tags</button>
+        <button class="quick-btn" onclick="sendMessage('help')">❓ Help</button>
+      </div>
+      <div class="input-box">
+        <input type="text" id="messageInput" placeholder="Message Task AI..." onkeypress="handleKeyPress(event)">
+        <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001';
+    const REMINDER_API = 'http://localhost:3002';
+    const RECURRENCE_API = 'http://localhost:3003';
+    const USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+    let isFirstMessage = true;
+
+    function addMessage(content, isUser = false) {
+      // Hide welcome screen on first message
+      if (isFirstMessage) {
+        document.getElementById('welcomeScreen').style.display = 'none';
+        isFirstMessage = false;
+      }
+
+      const messagesDiv = document.getElementById('chatMessages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+      const avatar = isUser ? '👤' : '✨';
+
+      messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div class="message-content">${content}</div>
+      `;
+
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function showTyping() {
+      const messagesDiv = document.getElementById('chatMessages');
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'message bot';
+      typingDiv.id = 'typingIndicator';
+      typingDiv.innerHTML = `
+        <div class="message-avatar">✨</div>
+        <div class="message-content">
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+      `;
+      messagesDiv.appendChild(typingDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function hideTyping() {
+      const typing = document.getElementById('typingIndicator');
+      if (typing) typing.remove();
+    }
+
+    function formatTasks(tasks) {
+      if (!tasks || tasks.length === 0) {
+        return '<p style="color: var(--text-secondary)">No tasks found.</p>';
+      }
+
+      return tasks.map(task => {
+        const tags = task.tags && task.tags.length > 0
+          ? `<div class="task-tags">${task.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`
+          : '';
+        const due = task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : '';
+
+        return `
+          <div class="task-card">
+            <div class="task-header">
+              <span class="task-title">${task.title}</span>
+              <span class="task-priority ${task.priority}">${task.priority}</span>
+            </div>
+            <div class="task-meta">
+              <span>Status: ${task.status}</span>
+              ${due}
+              <span class="task-id">${task.id.slice(0,8)}</span>
+            </div>
+            ${tags}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function sendMessage(text) {
+      const input = document.getElementById('messageInput');
+      const message = text || input.value.trim();
+
+      if (!message) return;
+
+      addMessage(message, true);
+      input.value = '';
+      showTyping();
+
+      try {
+        const response = await processCommand(message);
+        hideTyping();
+        addMessage(response);
+      } catch (error) {
+        hideTyping();
+        addMessage(`<span class="error-msg">Error: ${error.message}</span>`);
+      }
+    }
+
+    async function processCommand(message) {
+      const msg = message.toLowerCase();
+
+      // Create task
+      if (msg.includes('create task') || msg.includes('create a task') || msg.includes('add task') || msg.includes('new task')) {
+        let title = message.replace(/^.*(?:create|add|new)\s+(?:a\s+)?task\s*/i, '').trim();
+        let priority = 'medium';
+
+        const priorityMatch = title.match(/\s+(?:with\s+)?(low|medium|high|urgent)(?:\s+priority)?$/i);
+        if (priorityMatch) {
+          priority = priorityMatch[1].toLowerCase();
+          title = title.replace(/\s+(?:with\s+)?(low|medium|high|urgent)(?:\s+priority)?$/i, '').trim();
+        }
+
+        title = title.replace(/^['"]|['"]$/g, '').trim();
+
+        if (title) {
+          const res = await fetch(`${API_BASE}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ title, priority })
+          });
+
+          const task = await res.json();
+          if (task.error) return `<span class="error-msg">Error: ${task.error}</span>`;
+
+          return `<span class="success-msg">✅ Task created successfully!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${task.title}</span>
+                <span class="task-priority ${task.priority}">${task.priority}</span>
+              </div>
+              <div class="task-meta">
+                <span>Status: ${task.status}</span>
+                <span class="task-id">${task.id.slice(0,8)}</span>
+              </div>
+            </div>`;
+        }
+        return 'Please provide a task title. Example: "Create task Buy groceries"';
+      }
+
+      // Show tasks
+      if (msg.includes('show') && msg.includes('task') || msg === 'list tasks' || msg === 'my tasks' || msg === 'tasks') {
+        let url = `${API_BASE}/tasks`;
+        let filter = '';
+
+        if (msg.includes('urgent')) { url += '?priority=urgent'; filter = 'urgent'; }
+        else if (msg.includes('high')) { url += '?priority=high'; filter = 'high priority'; }
+        else if (msg.includes('low')) { url += '?priority=low'; filter = 'low priority'; }
+        else if (msg.includes('completed')) { url += '?status=completed'; filter = 'completed'; }
+
+        const res = await fetch(url, { headers: { 'X-User-Id': USER_ID } });
+        const data = await res.json();
+
+        const title = filter ? `📋 ${filter.charAt(0).toUpperCase() + filter.slice(1)} Tasks (${data.total})` : `📋 All Tasks (${data.total})`;
+        return `<strong>${title}</strong>${formatTasks(data.tasks)}`;
+      }
+
+      // Add tag
+      if (msg.includes('add tag')) {
+        const match = message.match(/add tag\s+['"]?(\w+[-\w]*)['"]?\s+(?:to\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const tag = match[1].toLowerCase();
+          const taskId = match[2];
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ addTags: [tag] })
+          });
+
+          const updated = await res.json();
+          return `<span class="success-msg">✅ Tag added!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${updated.title}</span>
+                <span class="task-priority ${updated.priority}">${updated.priority}</span>
+              </div>
+              <div class="task-tags">${updated.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+            </div>`;
+        }
+        return 'Usage: "Add tag [tagname] to task [id]"';
+      }
+
+      // Remove tag
+      if (msg.includes('remove tag') || msg.includes('delete tag') || msg.includes('untag')) {
+        const match = message.match(/(?:remove|delete)\s+tag\s+['"]?(\w+[-\w]*)['"]?\s+(?:from\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const tag = match[1].toLowerCase();
+          const taskId = match[2];
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ removeTags: [tag] })
+          });
+
+          const updated = await res.json();
+          const tagsHtml = updated.tags && updated.tags.length > 0
+            ? `<div class="task-tags">${updated.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`
+            : '<p style="color: var(--text-secondary); margin-top: 8px;">No tags</p>';
+
+          return `<span class="success-msg">✅ Tag "${tag}" removed!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${updated.title}</span>
+                <span class="task-priority ${updated.priority}">${updated.priority}</span>
+              </div>
+              ${tagsHtml}
+            </div>`;
+        }
+        return 'Usage: "Remove tag [tagname] from task [id]"';
+      }
+
+      // Filter by tag
+      if (msg.includes('tagged') || msg.includes('with tag') || msg.includes('by tag') || (msg.includes('tag') && (msg.includes('filter') || msg.includes('show')))) {
+        const match = message.match(/(?:tagged|with tag|by tag|tag)\s+['"]?(\w+[-\w]*)['"]?/i);
+        if (match) {
+          const tagFilter = match[1].toLowerCase();
+
+          const res = await fetch(`${API_BASE}/tasks/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ filters: { tags: [tagFilter] } })
+          });
+          const data = await res.json();
+
+          return `<strong>🏷️ Tasks tagged "${tagFilter}" (${data.total})</strong>${formatTasks(data.tasks)}`;
+        }
+        return 'Usage: "Show tasks tagged [tagname]" or "Filter by tag [tagname]"';
+      }
+
+      // Set priority
+      if (msg.includes('set') && (msg.includes('priority') || msg.includes('urgent') || msg.includes('high') || msg.includes('low') || msg.includes('medium'))) {
+        const match = message.match(/set\s+(?:task\s+)?['"]?([a-f0-9-]+)['"]?\s+(?:to\s+|as\s+)?(low|medium|high|urgent)/i);
+        if (match) {
+          const taskId = match[1];
+          const priority = match[2].toLowerCase();
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ priority })
+          });
+
+          const updated = await res.json();
+          return `<span class="success-msg">✅ Priority updated!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${updated.title}</span>
+                <span class="task-priority ${updated.priority}">${updated.priority}</span>
+              </div>
+            </div>`;
+        }
+      }
+
+      // Search
+      if (msg.startsWith('search') || msg.startsWith('find')) {
+        const query = message.replace(/^(search|find)\s*/i, '').trim();
+        if (query) {
+          const res = await fetch(`${API_BASE}/tasks/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ query })
+          });
+
+          const data = await res.json();
+          const tasks = data.tasks || data;
+          return `<strong>🔍 Search results for "${query}"</strong>${formatTasks(tasks)}`;
+        }
+      }
+
+      // Set due date
+      if (msg.includes('due') && (msg.includes('set') || msg.includes('task'))) {
+        const match = message.match(/(?:set\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?\s+(?:due|deadline)\s+(.+)/i) ||
+                      message.match(/(?:due|deadline)\s+(?:for\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?\s+(?:to\s+|is\s+)?(.+)/i);
+        if (match) {
+          const taskId = match[1];
+          const dueDateStr = match[2].trim();
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          // Parse natural language date
+          const dueDate = parseDueDate(dueDateStr);
+          if (!dueDate) return `<span class="error-msg">Could not parse date: "${dueDateStr}"</span>`;
+
+          const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ dueDate: dueDate.toISOString() })
+          });
+
+          const updated = await res.json();
+          return `<span class="success-msg">✅ Due date set!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${updated.title}</span>
+                <span class="task-priority ${updated.priority}">${updated.priority}</span>
+              </div>
+              <div class="task-meta">
+                <span>📅 Due: ${new Date(updated.dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+              </div>
+            </div>`;
+        }
+      }
+
+      // Show overdue tasks
+      if (msg.includes('overdue')) {
+        const res = await fetch(`${API_BASE}/tasks/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+          body: JSON.stringify({ filters: { overdue: true } })
+        });
+        const data = await res.json();
+        return `<strong>⚠️ Overdue Tasks (${data.total})</strong>${formatTasks(data.tasks)}`;
+      }
+
+      // Sort tasks
+      if (msg.includes('sort') || msg.includes('sorted')) {
+        let sortField = 'createdAt';
+        let sortDir = 'desc';
+
+        if (msg.includes('due') || msg.includes('deadline')) { sortField = 'dueDate'; sortDir = 'asc'; }
+        else if (msg.includes('priority')) { sortField = 'priority'; sortDir = 'desc'; }
+        else if (msg.includes('title') || msg.includes('name') || msg.includes('alphabetic')) { sortField = 'title'; sortDir = 'asc'; }
+        else if (msg.includes('oldest') || msg.includes('old')) { sortField = 'createdAt'; sortDir = 'asc'; }
+        else if (msg.includes('newest') || msg.includes('recent')) { sortField = 'createdAt'; sortDir = 'desc'; }
+
+        const res = await fetch(`${API_BASE}/tasks/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+          body: JSON.stringify({ sort: { field: sortField, direction: sortDir } })
+        });
+        const data = await res.json();
+        return `<strong>📋 Tasks sorted by ${sortField}</strong>${formatTasks(data.tasks)}`;
+      }
+
+      // Create reminder
+      if (msg.includes('remind') && (msg.includes('task') || msg.includes('about'))) {
+        const match = message.match(/remind\s+(?:me\s+)?(?:about\s+)?task\s+['"]?([a-f0-9-]{8,})['"]?\s+(.+)/i) ||
+                      message.match(/remind\s+(?:me\s+)?(?:about\s+)?['"]?([a-f0-9-]{8,})['"]?\s+(.+)/i) ||
+                      message.match(/task\s+['"]?([a-f0-9-]{8,})['"]?\s+remind\s+(?:me\s+)?(.+)/i);
+        if (match) {
+          const taskId = match[1];
+          const timeStr = match[2].trim();
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          // Parse reminder time
+          const reminderTime = parseReminderTime(timeStr, task.dueDate);
+          if (!reminderTime) return `<span class="error-msg">Could not parse reminder time: "${timeStr}"</span>`;
+
+          try {
+            const res = await fetch(`${REMINDER_API}/reminders`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+              body: JSON.stringify({
+                taskId: task.id,
+                reminderTime: reminderTime.toISOString(),
+                message: `Reminder: ${task.title}`
+              })
+            });
+
+            if (!res.ok) throw new Error('Reminder service error');
+            const reminder = await res.json();
+
+            return `<span class="success-msg">🔔 Reminder set!</span>
+              <div class="task-card">
+                <div class="task-header">
+                  <span class="task-title">${task.title}</span>
+                </div>
+                <div class="task-meta">
+                  <span>⏰ ${new Date(reminder.reminderTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                </div>
+              </div>`;
+          } catch (e) {
+            return `<span class="error-msg">Reminder service unavailable. Make sure it's running on port 3002.</span>`;
+          }
+        }
+        return 'Usage: "Remind me about task [id] in 1 hour" or "Remind me task [id] 30 minutes before"';
+      }
+
+      // List reminders
+      if (msg.includes('reminder') && (msg.includes('show') || msg.includes('list') || msg.includes('my'))) {
+        try {
+          const res = await fetch(`${REMINDER_API}/reminders`, {
+            headers: { 'X-User-Id': USER_ID }
+          });
+
+          if (!res.ok) throw new Error('Reminder service error');
+          const data = await res.json();
+          const reminders = data.reminders || data;
+
+          if (!reminders || reminders.length === 0) {
+            return '<p style="color: var(--text-secondary)">No reminders set.</p>';
+          }
+
+          const reminderHtml = reminders.map(r => `
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">🔔 ${r.message || 'Reminder'}</span>
+                <span class="task-id">${r.id.slice(0,8)}</span>
+              </div>
+              <div class="task-meta">
+                <span>⏰ ${new Date(r.reminderTime).toLocaleString()}</span>
+                <span>Status: ${r.status}</span>
+              </div>
+            </div>
+          `).join('');
+
+          return `<strong>🔔 Your Reminders (${reminders.length})</strong>${reminderHtml}`;
+        } catch (e) {
+          return `<span class="error-msg">Reminder service unavailable.</span>`;
+        }
+      }
+
+      // Delete reminder
+      if (msg.includes('delete reminder') || msg.includes('remove reminder') || msg.includes('cancel reminder')) {
+        const match = message.match(/(?:delete|remove|cancel)\s+reminder\s+['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const reminderId = match[1];
+
+          try {
+            const listRes = await fetch(`${REMINDER_API}/reminders`, { headers: { 'X-User-Id': USER_ID } });
+            const listData = await listRes.json();
+            const reminders = listData.reminders || listData;
+            const reminder = reminders.find(r => r.id.startsWith(reminderId));
+
+            if (!reminder) return `<span class="error-msg">Reminder not found: ${reminderId}</span>`;
+
+            await fetch(`${REMINDER_API}/reminders/${reminder.id}`, {
+              method: 'DELETE',
+              headers: { 'X-User-Id': USER_ID }
+            });
+
+            return `<span class="success-msg">🗑️ Reminder deleted.</span>`;
+          } catch (e) {
+            return `<span class="error-msg">Reminder service unavailable.</span>`;
+          }
+        }
+      }
+
+      // Create recurring task
+      if (msg.includes('every') || msg.includes('recurring') || msg.includes('repeat')) {
+        const match = message.match(/(?:create\s+)?(?:recurring\s+)?task\s+['"]?(.+?)['"]?\s+(?:every|repeat)\s+(daily|weekly|monthly|yearly|day|week|month|year)/i) ||
+                      message.match(/(?:every|repeat)\s+(daily|weekly|monthly|yearly|day|week|month|year)\s+(?:task\s+)?['"]?(.+?)['"]?$/i);
+
+        if (match) {
+          let title, frequency;
+          if (match[1].match(/daily|weekly|monthly|yearly|day|week|month|year/i)) {
+            frequency = match[1];
+            title = match[2];
+          } else {
+            title = match[1];
+            frequency = match[2];
+          }
+
+          // Normalize frequency
+          frequency = frequency.toLowerCase();
+          if (frequency === 'day') frequency = 'daily';
+          if (frequency === 'week') frequency = 'weekly';
+          if (frequency === 'month') frequency = 'monthly';
+          if (frequency === 'year') frequency = 'yearly';
+
+          // First create the task
+          const taskRes = await fetch(`${API_BASE}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ title, isRecurring: true })
+          });
+
+          const task = await taskRes.json();
+          if (task.error) return `<span class="error-msg">Error: ${task.error}</span>`;
+
+          // Then create recurrence pattern
+          try {
+            const recRes = await fetch(`${RECURRENCE_API}/recurrence`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+              body: JSON.stringify({
+                taskId: task.id,
+                frequency,
+                interval: 1
+              })
+            });
+
+            if (recRes.ok) {
+              const recurrence = await recRes.json();
+              return `<span class="success-msg">✅ Recurring task created!</span>
+                <div class="task-card">
+                  <div class="task-header">
+                    <span class="task-title">🔄 ${task.title}</span>
+                    <span class="task-priority medium">${frequency}</span>
+                  </div>
+                  <div class="task-meta">
+                    <span>Repeats: ${frequency}</span>
+                    <span class="task-id">${task.id.slice(0,8)}</span>
+                  </div>
+                </div>`;
+            }
+          } catch (e) {
+            // Recurrence service might not be running
+          }
+
+          return `<span class="success-msg">✅ Task created (recurrence service unavailable)</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${task.title}</span>
+              </div>
+            </div>`;
+        }
+      }
+
+      // Pause/Resume recurring
+      if (msg.includes('pause') && msg.includes('recur')) {
+        const match = message.match(/pause\s+(?:recurring\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const taskId = match[1];
+          try {
+            const res = await fetch(`${RECURRENCE_API}/recurrence/${taskId}/pause`, {
+              method: 'POST',
+              headers: { 'X-User-Id': USER_ID }
+            });
+            if (res.ok) return `<span class="success-msg">⏸️ Recurrence paused.</span>`;
+          } catch (e) {}
+          return `<span class="error-msg">Could not pause recurrence.</span>`;
+        }
+      }
+
+      if (msg.includes('resume') && msg.includes('recur')) {
+        const match = message.match(/resume\s+(?:recurring\s+)?(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const taskId = match[1];
+          try {
+            const res = await fetch(`${RECURRENCE_API}/recurrence/${taskId}/resume`, {
+              method: 'POST',
+              headers: { 'X-User-Id': USER_ID }
+            });
+            if (res.ok) return `<span class="success-msg">▶️ Recurrence resumed.</span>`;
+          } catch (e) {}
+          return `<span class="error-msg">Could not resume recurrence.</span>`;
+        }
+      }
+
+      // Show tags
+      if (msg.includes('tag') && (msg.includes('show') || msg.includes('list') || msg.includes('all'))) {
+        const res = await fetch(`${API_BASE}/tags`, { headers: { 'X-User-Id': USER_ID } });
+        const data = await res.json();
+        const tags = data.tags || data;
+
+        if (!tags || tags.length === 0) {
+          return '<p style="color: var(--text-secondary)">No tags yet. Add tags to tasks to see them here.</p>';
+        }
+
+        return `<strong>🏷️ Your Tags</strong>
+          <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;">
+            ${tags.map(t => `<span class="tag">${t.name} (${t.usageCount})</span>`).join('')}
+          </div>`;
+      }
+
+      // Complete task
+      if (msg.includes('complete') || msg.includes('done') || msg.includes('finish')) {
+        const match = message.match(/(?:complete|done|finish)\s+(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const taskId = match[1];
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID },
+            body: JSON.stringify({ status: 'completed' })
+          });
+
+          const updated = await res.json();
+          return `<span class="success-msg">✅ Task completed!</span>
+            <div class="task-card">
+              <div class="task-header">
+                <span class="task-title">${updated.title}</span>
+                <span class="task-priority ${updated.priority}">${updated.priority}</span>
+              </div>
+              <div class="task-meta"><span>Status: ${updated.status}</span></div>
+            </div>`;
+        }
+      }
+
+      // Delete task
+      if (msg.includes('delete') || msg.includes('remove')) {
+        const match = message.match(/(?:delete|remove)\s+(?:task\s+)?['"]?([a-f0-9-]+)['"]?/i);
+        if (match) {
+          const taskId = match[1];
+
+          const listRes = await fetch(`${API_BASE}/tasks`, { headers: { 'X-User-Id': USER_ID } });
+          const listData = await listRes.json();
+          const task = listData.tasks.find(t => t.id.startsWith(taskId));
+
+          if (!task) return `<span class="error-msg">Task not found: ${taskId}</span>`;
+
+          await fetch(`${API_BASE}/tasks/${task.id}`, {
+            method: 'DELETE',
+            headers: { 'X-User-Id': USER_ID }
+          });
+
+          return `<span class="success-msg">🗑️ Task "${task.title}" deleted.</span>`;
+        }
+      }
+
+      // Help
+      if (msg === 'help' || msg === '?') {
+        return `
+          <strong>📖 Available Commands</strong>
+
+          <div class="task-card">
+            <strong>📝 Create Tasks</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Create task [name]"<br>
+              "Create task [name] with high priority"<br>
+              "New task [name] urgent"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>📋 View Tasks</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Show my tasks"<br>
+              "Show urgent tasks"<br>
+              "Show completed tasks"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>🏷️ Tags</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Add tag [name] to task [id]"<br>
+              "Remove tag [name] from task [id]"<br>
+              "Show tasks tagged [name]"<br>
+              "Show all tags"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>⚡ Priority</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Set task [id] to urgent"<br>
+              "Show urgent tasks"<br>
+              "Show high priority tasks"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>✅ Complete & Delete</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Complete task [id]"<br>
+              "Delete task [id]"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>📅 Due Dates</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Set task [id] due Friday"<br>
+              "Set task [id] due tomorrow"<br>
+              "Show overdue tasks"<br>
+              "Sort by due date"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>🔔 Reminders</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Remind me about task [id] in 1 hour"<br>
+              "Remind me task [id] 30 minutes before"<br>
+              "Show my reminders"<br>
+              "Delete reminder [id]"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>🔄 Recurring Tasks</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Create task Standup every daily"<br>
+              "Create task Report every weekly"<br>
+              "Pause recurring task [id]"<br>
+              "Resume recurring task [id]"
+            </p>
+          </div>
+
+          <div class="task-card">
+            <strong>🔍 Search & Sort</strong>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              "Search [keyword]"<br>
+              "Sort by priority"<br>
+              "Sort by due date"<br>
+              "Show newest tasks"
+            </p>
+          </div>
+        `;
+      }
+
+      return `I didn't understand that. Type <strong>"help"</strong> to see available commands.`;
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    // Parse reminder time (e.g., "in 1 hour", "30 minutes before", "at 3pm", "in 20 sec")
+    function parseReminderTime(str, dueDate) {
+      const now = new Date();
+      const lower = str.toLowerCase().trim();
+
+      // "in X seconds/minutes/hours" or just "X sec/min/hours"
+      const inMatch = lower.match(/(?:in\s+)?(\d+)\s+(second|sec|minute|min|hour|hr)s?/);
+      if (inMatch) {
+        const amount = parseInt(inMatch[1]);
+        const unit = inMatch[2];
+        const d = new Date(now);
+        if (unit.startsWith('hour') || unit === 'hr') {
+          d.setHours(d.getHours() + amount);
+        } else if (unit.startsWith('min')) {
+          d.setMinutes(d.getMinutes() + amount);
+        } else if (unit.startsWith('sec')) {
+          d.setSeconds(d.getSeconds() + amount);
+        }
+        return d;
+      }
+
+      // "X hours/minutes before" (requires dueDate)
+      const beforeMatch = lower.match(/(\d+)\s+(hour|minute|min|hr|day)s?\s+before/);
+      if (beforeMatch && dueDate) {
+        const amount = parseInt(beforeMatch[1]);
+        const unit = beforeMatch[2];
+        const d = new Date(dueDate);
+        if (unit.startsWith('hour') || unit === 'hr') {
+          d.setHours(d.getHours() - amount);
+        } else if (unit === 'day') {
+          d.setDate(d.getDate() - amount);
+        } else {
+          d.setMinutes(d.getMinutes() - amount);
+        }
+        return d;
+      }
+
+      // "at 3pm" or "at 15:00"
+      const atMatch = lower.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+      if (atMatch) {
+        let hours = parseInt(atMatch[1]);
+        const minutes = atMatch[2] ? parseInt(atMatch[2]) : 0;
+        const ampm = atMatch[3];
+
+        if (ampm === 'pm' && hours < 12) hours += 12;
+        if (ampm === 'am' && hours === 12) hours = 0;
+
+        const d = new Date(now);
+        d.setHours(hours, minutes, 0, 0);
+        if (d <= now) d.setDate(d.getDate() + 1); // Tomorrow if time has passed
+        return d;
+      }
+
+      // "tomorrow at X"
+      if (lower.includes('tomorrow')) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 1);
+        const timeMatch = lower.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+          const ampm = timeMatch[3];
+          if (ampm === 'pm' && hours < 12) hours += 12;
+          if (ampm === 'am' && hours === 12) hours = 0;
+          d.setHours(hours, minutes, 0, 0);
+        } else {
+          d.setHours(9, 0, 0, 0); // Default to 9am
+        }
+        return d;
+      }
+
+      return null;
+    }
+
+    // Parse natural language date
+    function parseDueDate(str) {
+      const now = new Date();
+      const lower = str.toLowerCase().trim();
+
+      // Today/Tomorrow
+      if (lower === 'today') return new Date(now.setHours(23, 59, 59, 999));
+      if (lower === 'tomorrow') {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 1);
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+
+      // Day names (Monday, Tuesday, etc.)
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayIndex = days.indexOf(lower);
+      if (dayIndex !== -1) {
+        const d = new Date(now);
+        const currentDay = d.getDay();
+        let daysUntil = dayIndex - currentDay;
+        if (daysUntil <= 0) daysUntil += 7;
+        d.setDate(d.getDate() + daysUntil);
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+
+      // Next week
+      if (lower.includes('next week')) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 7);
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+
+      // In X days
+      const inDaysMatch = lower.match(/in\s+(\d+)\s+days?/);
+      if (inDaysMatch) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + parseInt(inDaysMatch[1]));
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+
+      // Try parsing as date string
+      const parsed = new Date(str);
+      if (!isNaN(parsed.getTime())) return parsed;
+
+      return null;
+    }
+
+    // Focus input on load
+    document.getElementById('messageInput').focus();
+
+    // ========== REMINDER NOTIFICATION SYSTEM ==========
+    // Load notified reminders from localStorage (persists across refresh)
+    function getNotifiedReminders() {
+      try {
+        const stored = localStorage.getItem('notifiedReminders');
+        return stored ? new Set(JSON.parse(stored)) : new Set();
+      } catch (e) {
+        return new Set();
+      }
+    }
+
+    function saveNotifiedReminder(reminderId) {
+      try {
+        const notified = getNotifiedReminders();
+        notified.add(reminderId);
+        localStorage.setItem('notifiedReminders', JSON.stringify([...notified]));
+      } catch (e) {
+        // localStorage might be unavailable
+      }
+    }
+
+    async function checkReminders() {
+      try {
+        const res = await fetch(`${REMINDER_API}/reminders`, {
+          headers: { 'X-User-Id': USER_ID }
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const reminders = data.reminders || [];
+        const now = new Date();
+        const notifiedReminders = getNotifiedReminders();
+
+        for (const reminder of reminders) {
+          const reminderTime = new Date(reminder.reminderTime);
+          const reminderKey = reminder.id;
+
+          // Check if reminder time has passed and we haven't notified yet
+          if (reminderTime <= now && !notifiedReminders.has(reminderKey)) {
+            // Save to localStorage immediately (persists across refresh)
+            saveNotifiedReminder(reminderKey);
+
+            // First notification - immediately
+            showReminderNotification(reminder, 1);
+
+            // Second notification - 5 seconds later
+            setTimeout(() => {
+              showReminderNotification(reminder, 2);
+            }, 5000);
+          }
+        }
+      } catch (e) {
+        // Reminder service might be unavailable
+      }
+    }
+
+    function showReminderNotification(reminder, count) {
+      // Create notification popup
+      const notification = document.createElement('div');
+      notification.className = 'reminder-notification';
+      notification.innerHTML = `
+        <div class="notification-header">
+          <span>🔔 Reminder ${count === 2 ? '(Final)' : ''}</span>
+          <button onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+        <div class="notification-body">
+          <strong>${reminder.message || 'Task Reminder'}</strong>
+          <p>Time: ${new Date(reminder.reminderTime).toLocaleTimeString()}</p>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Play sound
+      playNotificationSound();
+
+      // Auto remove after 10 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 10000);
+
+      // Also add to chat
+      if (count === 1) {
+        addMessage(`🔔 <strong>REMINDER!</strong><br>${reminder.message || 'Task reminder'}<br><small>Time: ${new Date(reminder.reminderTime).toLocaleTimeString()}</small>`);
+      }
+    }
+
+    function playNotificationSound() {
+      // Create a simple beep sound
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.3;
+
+        oscillator.start();
+        setTimeout(() => {
+          oscillator.stop();
+          audioContext.close();
+        }, 200);
+      } catch (e) {
+        // Audio not supported
+      }
+    }
+
+    // Check reminders every 5 seconds
+    setInterval(checkReminders, 5000);
+    // Initial check
+    checkReminders();
+  </script>
+
+  <style>
+    .reminder-notification {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, #10a37f, #0d8a6a);
+      color: white;
+      padding: 0;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(16, 163, 127, 0.4);
+      z-index: 9999;
+      min-width: 300px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px 12px 0 0;
+      font-weight: 600;
+    }
+
+    .notification-header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+
+    .notification-header button:hover {
+      opacity: 1;
+    }
+
+    .notification-body {
+      padding: 16px;
+    }
+
+    .notification-body strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .notification-body p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+  </style>
+</body>
+</html>

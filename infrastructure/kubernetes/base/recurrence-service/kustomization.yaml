@@ -1,0 +1,14 @@
+# Recurrence Service Kustomization
+# Task: P5-T-103
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+commonLabels:
+  app.kubernetes.io/name: recurrence-service
+  app.kubernetes.io/component: backend
+  app.kubernetes.io/part-of: phase5-chatbot

@@ -1,0 +1,526 @@
+asyncapi: 3.0.0
+info:
+  title: Phase V Task Management MCP Tools
+  version: 1.0.0
+  description: |
+    AsyncAPI specification for MCP tools that extend the Phase III chatbot
+    with task management capabilities. All state-changing operations emit
+    domain events via Dapr pub/sub to Kafka.
+
+defaultContentType: application/json
+
+channels:
+  task.events:
+    address: task.events
+    description: Domain events for task-related operations
+    messages:
+      taskCreated:
+        $ref: '#/components/messages/TaskCreated'
+      taskUpdated:
+        $ref: '#/components/messages/TaskUpdated'
+      taskCompleted:
+        $ref: '#/components/messages/TaskCompleted'
+      taskPriorityChanged:
+        $ref: '#/components/messages/TaskPriorityChanged'
+      taskTagsAdded:
+        $ref: '#/components/messages/TaskTagsAdded'
+      taskTagsRemoved:
+        $ref: '#/components/messages/TaskTagsRemoved'
+      taskDueDateSet:
+        $ref: '#/components/messages/TaskDueDateSet'
+      taskSearched:
+        $ref: '#/components/messages/TaskSearched'
+
+  reminder.events:
+    address: reminder.events
+    description: Domain events for reminder operations
+    messages:
+      reminderCreated:
+        $ref: '#/components/messages/ReminderCreated'
+      reminderTriggered:
+        $ref: '#/components/messages/ReminderTriggered'
+      reminderDeleted:
+        $ref: '#/components/messages/ReminderDeleted'
+
+  recurrence.events:
+    address: recurrence.events
+    description: Domain events for recurrence operations
+    messages:
+      recurrenceCreated:
+        $ref: '#/components/messages/RecurrenceCreated'
+      recurrenceTriggered:
+        $ref: '#/components/messages/RecurrenceTriggered'
+      recurrenceModified:
+        $ref: '#/components/messages/RecurrenceModified'
+      recurrencePaused:
+        $ref: '#/components/messages/RecurrencePaused'
+      recurrenceResumed:
+        $ref: '#/components/messages/RecurrenceResumed'
+      recurrenceStopped:
+        $ref: '#/components/messages/RecurrenceStopped'
+
+operations:
+  publishTaskEvent:
+    action: send
+    channel:
+      $ref: '#/channels/task.events'
+    description: Publish task domain events
+
+  publishReminderEvent:
+    action: send
+    channel:
+      $ref: '#/channels/reminder.events'
+    description: Publish reminder domain events
+
+  publishRecurrenceEvent:
+    action: send
+    channel:
+      $ref: '#/channels/recurrence.events'
+    description: Publish recurrence domain events
+
+  consumeTaskEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/task.events'
+    description: Consume task events (Audit, Reminder, Recurrence services)
+
+  consumeReminderEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/reminder.events'
+    description: Consume reminder events (Chatbot for notifications, Audit)
+
+  consumeRecurrenceEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/recurrence.events'
+    description: Consume recurrence events (Task Service, Audit)
+
+components:
+  messages:
+    TaskCreated:
+      name: task.created
+      payload:
+        $ref: '#/components/schemas/TaskCreatedPayload'
+
+    TaskUpdated:
+      name: task.updated
+      payload:
+        $ref: '#/components/schemas/TaskUpdatedPayload'
+
+    TaskCompleted:
+      name: task.completed
+      payload:
+        $ref: '#/components/schemas/TaskCompletedPayload'
+
+    TaskPriorityChanged:
+      name: task.priority.changed
+      payload:
+        $ref: '#/components/schemas/TaskPriorityChangedPayload'
+
+    TaskTagsAdded:
+      name: task.tags.added
+      payload:
+        $ref: '#/components/schemas/TaskTagsAddedPayload'
+
+    TaskTagsRemoved:
+      name: task.tags.removed
+      payload:
+        $ref: '#/components/schemas/TaskTagsRemovedPayload'
+
+    TaskDueDateSet:
+      name: task.dueDate.set
+      payload:
+        $ref: '#/components/schemas/TaskDueDateSetPayload'
+
+    TaskSearched:
+      name: task.searched
+      payload:
+        $ref: '#/components/schemas/TaskSearchedPayload'
+
+    ReminderCreated:
+      name: reminder.created
+      payload:
+        $ref: '#/components/schemas/ReminderCreatedPayload'
+
+    ReminderTriggered:
+      name: reminder.triggered
+      payload:
+        $ref: '#/components/schemas/ReminderTriggeredPayload'
+
+    ReminderDeleted:
+      name: reminder.deleted
+      payload:
+        $ref: '#/components/schemas/ReminderDeletedPayload'
+
+    RecurrenceCreated:
+      name: task.recurrence.created
+      payload:
+        $ref: '#/components/schemas/RecurrenceCreatedPayload'
+
+    RecurrenceTriggered:
+      name: task.recurrence.triggered
+      payload:
+        $ref: '#/components/schemas/RecurrenceTriggeredPayload'
+
+    RecurrenceModified:
+      name: task.recurrence.modified
+      payload:
+        $ref: '#/components/schemas/RecurrenceModifiedPayload'
+
+    RecurrencePaused:
+      name: task.recurrence.paused
+      payload:
+        $ref: '#/components/schemas/RecurrencePausedPayload'
+
+    RecurrenceResumed:
+      name: task.recurrence.resumed
+      payload:
+        $ref: '#/components/schemas/RecurrenceResumedPayload'
+
+    RecurrenceStopped:
+      name: task.recurrence.stopped
+      payload:
+        $ref: '#/components/schemas/RecurrenceStoppedPayload'
+
+  schemas:
+    # Common fields for all events
+    EventBase:
+      type: object
+      required:
+        - eventId
+        - timestamp
+        - correlationId
+        - userId
+        - toolName
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        toolName:
+          type: string
+          description: MCP tool that triggered this event
+
+    Priority:
+      type: string
+      enum: [low, medium, high, urgent]
+
+    TaskStatus:
+      type: string
+      enum: [pending, in_progress, completed, cancelled]
+
+    Frequency:
+      type: string
+      enum: [daily, weekly, monthly, yearly]
+
+    # Task Events
+    TaskCreatedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - title
+            - priority
+            - status
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            title:
+              type: string
+            description:
+              type: string
+            priority:
+              $ref: '#/components/schemas/Priority'
+            status:
+              $ref: '#/components/schemas/TaskStatus'
+            tags:
+              type: array
+              items:
+                type: string
+            dueDate:
+              type: string
+              format: date-time
+            recurrence:
+              $ref: '#/components/schemas/RecurrencePattern'
+
+    TaskUpdatedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - changes
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            changes:
+              type: object
+              description: Map of field names to new values
+
+    TaskCompletedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - completedAt
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            completedAt:
+              type: string
+              format: date-time
+
+    TaskPriorityChangedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - previousPriority
+            - newPriority
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            previousPriority:
+              $ref: '#/components/schemas/Priority'
+            newPriority:
+              $ref: '#/components/schemas/Priority'
+
+    TaskTagsAddedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - addedTags
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            addedTags:
+              type: array
+              items:
+                type: string
+
+    TaskTagsRemovedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - removedTags
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            removedTags:
+              type: array
+              items:
+                type: string
+
+    TaskDueDateSetPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - dueDate
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            dueDate:
+              type: string
+              format: date-time
+            previousDueDate:
+              type: string
+              format: date-time
+
+    TaskSearchedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - query
+            - resultCount
+          properties:
+            query:
+              type: string
+            filters:
+              type: object
+            resultCount:
+              type: integer
+
+    # Reminder Events
+    ReminderCreatedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - reminderId
+            - taskId
+            - reminderTime
+          properties:
+            reminderId:
+              type: string
+              format: uuid
+            taskId:
+              type: string
+              format: uuid
+            reminderTime:
+              type: string
+              format: date-time
+
+    ReminderTriggeredPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - reminderId
+            - taskId
+          properties:
+            reminderId:
+              type: string
+              format: uuid
+            taskId:
+              type: string
+              format: uuid
+
+    ReminderDeletedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - reminderId
+            - taskId
+          properties:
+            reminderId:
+              type: string
+              format: uuid
+            taskId:
+              type: string
+              format: uuid
+
+    # Recurrence Events
+    RecurrencePattern:
+      type: object
+      required:
+        - frequency
+        - interval
+      properties:
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        interval:
+          type: integer
+          minimum: 1
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        dayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 31
+        endDate:
+          type: string
+          format: date-time
+
+    RecurrenceCreatedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - recurrencePattern
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            recurrencePattern:
+              $ref: '#/components/schemas/RecurrencePattern'
+
+    RecurrenceTriggeredPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - originalTaskId
+            - newTaskId
+          properties:
+            originalTaskId:
+              type: string
+              format: uuid
+            newTaskId:
+              type: string
+              format: uuid
+
+    RecurrenceModifiedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - previousPattern
+            - newPattern
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            previousPattern:
+              $ref: '#/components/schemas/RecurrencePattern'
+            newPattern:
+              $ref: '#/components/schemas/RecurrencePattern'
+
+    RecurrencePausedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+          properties:
+            taskId:
+              type: string
+              format: uuid
+
+    RecurrenceResumedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+          properties:
+            taskId:
+              type: string
+              format: uuid
+
+    RecurrenceStoppedPayload:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required:
+            - taskId
+            - reason
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            reason:
+              type: string
+              enum: [user_stopped, end_date_reached]

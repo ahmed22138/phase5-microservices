@@ -1,0 +1,92 @@
+# Reminder Service Deployment
+# Task: P5-T-102
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-service
+  labels:
+    app: reminder-service
+    component: backend
+    part-of: phase5-chatbot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reminder-service
+  template:
+    metadata:
+      labels:
+        app: reminder-service
+        component: backend
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "reminder-service"
+        dapr.io/app-port: "3002"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: reminder-service
+          image: phase5/reminder-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3002
+              name: http
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3002"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DAPR_HOST
+              value: "localhost"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: PUBSUB_NAME
+              value: "pubsub"
+            - name: SCHEDULER_INTERVAL_MS
+              value: "30000"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: reminder-db-credentials
+                  key: host
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "reminder_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: reminder-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reminder-db-credentials
+                  key: password
+          envFrom:
+            - configMapRef:
+                name: reminder-service-config
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+      restartPolicy: Always

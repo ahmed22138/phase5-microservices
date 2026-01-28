@@ -1,0 +1,17 @@
+# Recurrence Service
+# Task: P5-T-103
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurrence-service
+  labels:
+    app: recurrence-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3003
+      protocol: TCP
+      name: http
+  selector:
+    app: recurrence-service

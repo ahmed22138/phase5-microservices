@@ -1,0 +1,94 @@
+# Audit Service Deployment
+# Task: P5-T-104
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  labels:
+    app: audit-service
+    component: backend
+    part-of: phase5-chatbot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+        component: backend
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "audit-service"
+        dapr.io/app-port: "3004"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: audit-service
+          image: phase5/audit-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3004
+              name: http
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3004"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DAPR_HOST
+              value: "localhost"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: PUBSUB_NAME
+              value: "pubsub"
+            - name: CONSUMER_PORT
+              value: "3005"
+            - name: ENABLE_CONSUMER
+              value: "true"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: audit-db-credentials
+                  key: host
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "audit_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: audit-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: audit-db-credentials
+                  key: password
+          envFrom:
+            - configMapRef:
+                name: audit-service-config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+      restartPolicy: Always

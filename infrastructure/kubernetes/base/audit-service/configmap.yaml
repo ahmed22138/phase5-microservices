@@ -1,0 +1,12 @@
+# Audit Service ConfigMap
+# Task: P5-T-104
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-service-config
+  labels:
+    app: audit-service
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  PUBSUB_NAME: "pubsub"

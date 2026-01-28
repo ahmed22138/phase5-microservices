@@ -1,0 +1,9 @@
+# Staging Namespace
+# Task: P5-T-109
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: phase5-staging
+  labels:
+    environment: staging
+    app.kubernetes.io/part-of: phase5

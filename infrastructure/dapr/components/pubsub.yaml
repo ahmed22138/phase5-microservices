@@ -1,0 +1,120 @@
+# Dapr Pub/Sub Component with Dead Letter Queue
+# Task: P5-T-121
+# Updated to include DLQ subscriptions for failed event handling
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: default
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    # Kafka broker addresses
+    - name: brokers
+      value: "localhost:9092"
+    # Consumer group for this application
+    - name: consumerGroup
+      value: "phase5-consumers"
+    # Client ID for Kafka connections
+    - name: clientID
+      value: "phase5-dapr"
+    # Authentication type (none for local dev)
+    - name: authType
+      value: "none"
+    # Initial offset for new consumer groups
+    - name: initialOffset
+      value: "oldest"
+    # Maximum message size (1MB)
+    - name: maxMessageBytes
+      value: "1048576"
+    # Disable TLS for local development
+    - name: disableTls
+      value: "true"
+    # Retry configuration
+    - name: consumeRetryEnabled
+      value: "true"
+    - name: consumeRetryInterval
+      value: "100ms"
+    # Disable auto-commit for reliability
+    - name: disableAutoCommit
+      value: "true"
+scopes:
+  - chatbot
+  - task-service
+  - reminder-service
+  - recurrence-service
+  - audit-service
+---
+# Subscription with Dead Letter Queue for Task Events
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: task-events-subscription
+spec:
+  pubsubname: pubsub
+  topic: task-events
+  routes:
+    default: /events/task
+  deadLetterTopic: task-events-dlq
+---
+# Subscription with Dead Letter Queue for Reminder Events
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: reminder-events-subscription
+spec:
+  pubsubname: pubsub
+  topic: reminder-events
+  routes:
+    default: /events/reminder
+  deadLetterTopic: reminder-events-dlq
+---
+# Subscription with Dead Letter Queue for Recurrence Events
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: recurrence-events-subscription
+spec:
+  pubsubname: pubsub
+  topic: recurrence-events
+  routes:
+    default: /events/recurrence
+  deadLetterTopic: recurrence-events-dlq
+---
+# DLQ Consumer Subscription (for audit-service to monitor failed events)
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: dlq-task-monitor-subscription
+spec:
+  pubsubname: pubsub
+  topic: task-events-dlq
+  routes:
+    default: /events/dlq/task
+  scopes:
+    - audit-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: dlq-reminder-monitor-subscription
+spec:
+  pubsubname: pubsub
+  topic: reminder-events-dlq
+  routes:
+    default: /events/dlq/reminder
+  scopes:
+    - audit-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: dlq-recurrence-monitor-subscription
+spec:
+  pubsubname: pubsub
+  topic: recurrence-events-dlq
+  routes:
+    default: /events/dlq/recurrence
+  scopes:
+    - audit-service

@@ -1,0 +1,224 @@
+openapi: 3.1.0
+info:
+  title: Reminder Service API
+  version: 1.0.0
+  description: |
+    Internal API for the Reminder Service. Manages scheduled reminders for tasks.
+    Reminder delivery is triggered via events consumed by the Chatbot.
+
+servers:
+  - url: http://localhost:3500/v1.0/invoke/reminder-service/method
+    description: Dapr sidecar (local development)
+
+paths:
+  /reminders:
+    post:
+      operationId: createReminder
+      summary: Create a new reminder
+      tags: [Reminders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReminderRequest'
+      responses:
+        '201':
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      operationId: listReminders
+      summary: List reminders for user
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: taskId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by task
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReminderStatus'
+      responses:
+        '200':
+          description: List of reminders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderListResponse'
+
+  /reminders/{reminderId}:
+    parameters:
+      - $ref: '#/components/parameters/ReminderId'
+
+    get:
+      operationId: getReminder
+      summary: Get reminder by ID
+      tags: [Reminders]
+      responses:
+        '200':
+          description: Reminder details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteReminder
+      summary: Delete (cancel) a reminder
+      tags: [Reminders]
+      responses:
+        '204':
+          description: Reminder deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reminders/task/{taskId}:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: listRemindersForTask
+      summary: List all reminders for a specific task
+      tags: [Reminders]
+      responses:
+        '200':
+          description: Reminders for task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderListResponse'
+
+    delete:
+      operationId: deleteRemindersForTask
+      summary: Delete all reminders for a task
+      tags: [Reminders]
+      responses:
+        '204':
+          description: All reminders deleted
+
+components:
+  parameters:
+    ReminderId:
+      name: reminderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ReminderStatus:
+      type: string
+      enum: [pending, triggered, cancelled]
+
+    Reminder:
+      type: object
+      required:
+        - id
+        - taskId
+        - userId
+        - reminderTime
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        reminderTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ReminderStatus'
+        triggeredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateReminderRequest:
+      type: object
+      required:
+        - taskId
+        - userId
+        - reminderTime
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        reminderTime:
+          type: string
+          format: date-time
+          description: Absolute time for reminder (UTC)
+
+    ReminderListResponse:
+      type: object
+      required:
+        - reminders
+      properties:
+        reminders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reminder'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

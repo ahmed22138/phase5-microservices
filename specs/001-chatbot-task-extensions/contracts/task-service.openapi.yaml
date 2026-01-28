@@ -1,0 +1,468 @@
+openapi: 3.1.0
+info:
+  title: Task Service API
+  version: 1.0.0
+  description: |
+    Internal API for the Task Service. Called by MCP tools via Dapr service invocation.
+    All state-changing operations emit domain events.
+
+servers:
+  - url: http://localhost:3500/v1.0/invoke/task-service/method
+    description: Dapr sidecar (local development)
+
+paths:
+  /tasks:
+    post:
+      operationId: createTask
+      summary: Create a new task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      operationId: listTasks
+      summary: List tasks with optional filters
+      tags: [Tasks]
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/Priority'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: dueBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dueAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: overdue
+          in: query
+          schema:
+            type: boolean
+        - name: recurring
+          in: query
+          schema:
+            type: boolean
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [priority, dueDate, createdAt, title]
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+  /tasks/search:
+    post:
+      operationId: searchTasks
+      summary: Full-text search with filters
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchTasksRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+  /tasks/{taskId}:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+
+    get:
+      operationId: getTask
+      summary: Get task by ID
+      tags: [Tasks]
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateTask
+      summary: Update task fields
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteTask
+      summary: Delete task
+      tags: [Tasks]
+      responses:
+        '204':
+          description: Task deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tags:
+    get:
+      operationId: listTags
+      summary: List all tags for user
+      tags: [Tags]
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagListResponse'
+
+components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Priority:
+      type: string
+      enum: [low, medium, high, urgent]
+
+    TaskStatus:
+      type: string
+      enum: [pending, in_progress, completed, cancelled]
+
+    Frequency:
+      type: string
+      enum: [daily, weekly, monthly, yearly]
+
+    RecurrencePattern:
+      type: object
+      required:
+        - frequency
+      properties:
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        interval:
+          type: integer
+          minimum: 1
+          default: 1
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        dayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 31
+        endDate:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      required:
+        - id
+        - userId
+        - title
+        - priority
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          maxLength: 5000
+        priority:
+          $ref: '#/components/schemas/Priority'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        tags:
+          type: array
+          items:
+            type: string
+        dueDate:
+          type: string
+          format: date-time
+        isRecurring:
+          type: boolean
+        recurrence:
+          $ref: '#/components/schemas/RecurrencePattern'
+        parentTaskId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - userId
+        - title
+      properties:
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          maxLength: 5000
+        priority:
+          $ref: '#/components/schemas/Priority'
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+        dueDate:
+          type: string
+          format: date-time
+        recurrence:
+          $ref: '#/components/schemas/RecurrencePattern'
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          maxLength: 5000
+        priority:
+          $ref: '#/components/schemas/Priority'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        dueDate:
+          type: string
+          format: date-time
+        addTags:
+          type: array
+          items:
+            type: string
+        removeTags:
+          type: array
+          items:
+            type: string
+        recurrence:
+          $ref: '#/components/schemas/RecurrencePattern'
+
+    SearchTasksRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        query:
+          type: string
+          description: Full-text search query
+        filters:
+          type: object
+          properties:
+            priority:
+              $ref: '#/components/schemas/Priority'
+            status:
+              $ref: '#/components/schemas/TaskStatus'
+            tags:
+              type: array
+              items:
+                type: string
+            dueBefore:
+              type: string
+              format: date-time
+            dueAfter:
+              type: string
+              format: date-time
+            overdue:
+              type: boolean
+            recurring:
+              type: boolean
+        sort:
+          type: object
+          properties:
+            field:
+              type: string
+              enum: [priority, dueDate, createdAt, title]
+            order:
+              type: string
+              enum: [asc, desc]
+        limit:
+          type: integer
+          default: 50
+          maximum: 100
+        offset:
+          type: integer
+          default: 0
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+        - total
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    Tag:
+      type: object
+      required:
+        - id
+        - name
+        - usageCount
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        usageCount:
+          type: integer
+
+    TagListResponse:
+      type: object
+      required:
+        - tags
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

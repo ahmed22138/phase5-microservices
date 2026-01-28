@@ -1,0 +1,239 @@
+# PostgreSQL StatefulSets for Local Development
+# Task: P5-T-107
+# Each service gets its own database instance
+
+# Task Service Database
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-task
+spec:
+  serviceName: postgres-task
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-task
+  template:
+    metadata:
+      labels:
+        app: postgres-task
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: task_db
+            - name: POSTGRES_USER
+              value: task_user
+            - name: POSTGRES_PASSWORD
+              value: task_password_dev
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-task
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-task
+  clusterIP: None
+
+# Reminder Service Database
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-reminder
+spec:
+  serviceName: postgres-reminder
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-reminder
+  template:
+    metadata:
+      labels:
+        app: postgres-reminder
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: reminder_db
+            - name: POSTGRES_USER
+              value: reminder_user
+            - name: POSTGRES_PASSWORD
+              value: reminder_password_dev
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-reminder
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-reminder
+  clusterIP: None
+
+# Recurrence Service Database
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-recurrence
+spec:
+  serviceName: postgres-recurrence
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-recurrence
+  template:
+    metadata:
+      labels:
+        app: postgres-recurrence
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: recurrence_db
+            - name: POSTGRES_USER
+              value: recurrence_user
+            - name: POSTGRES_PASSWORD
+              value: recurrence_password_dev
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-recurrence
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-recurrence
+  clusterIP: None
+
+# Audit Service Database (TimescaleDB)
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-audit
+spec:
+  serviceName: postgres-audit
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-audit
+  template:
+    metadata:
+      labels:
+        app: postgres-audit
+    spec:
+      containers:
+        - name: timescaledb
+          image: timescale/timescaledb:latest-pg15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: audit_db
+            - name: POSTGRES_USER
+              value: audit_user
+            - name: POSTGRES_PASSWORD
+              value: audit_password_dev
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-audit
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-audit
+  clusterIP: None

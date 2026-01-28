@@ -1,0 +1,17 @@
+# Task Service
+# Task: P5-T-101
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-service
+  labels:
+    app: task-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    app: task-service

@@ -1,0 +1,12 @@
+# Task Service ConfigMap
+# Task: P5-T-101
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task-service-config
+  labels:
+    app: task-service
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  PUBSUB_NAME: "pubsub"

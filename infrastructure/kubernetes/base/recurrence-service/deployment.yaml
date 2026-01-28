@@ -1,0 +1,97 @@
+# Recurrence Service Deployment
+# Task: P5-T-103
+# Note: Single replica with leader election for scheduler
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurrence-service
+  labels:
+    app: recurrence-service
+    component: backend
+    part-of: phase5-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recurrence-service
+  template:
+    metadata:
+      labels:
+        app: recurrence-service
+        component: backend
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "recurrence-service"
+        dapr.io/app-port: "3003"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: recurrence-service
+          image: phase5/recurrence-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3003
+              name: http
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3003"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DAPR_HOST
+              value: "localhost"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: PUBSUB_NAME
+              value: "pubsub"
+            - name: SCHEDULER_INTERVAL_MS
+              value: "60000"
+            - name: ENABLE_SCHEDULER
+              value: "true"
+            - name: ENABLE_EVENT_HANDLERS
+              value: "true"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: recurrence-db-credentials
+                  key: host
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "recurrence_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: recurrence-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recurrence-db-credentials
+                  key: password
+          envFrom:
+            - configMapRef:
+                name: recurrence-service-config
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3003
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+      restartPolicy: Always

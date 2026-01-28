@@ -1,0 +1,270 @@
+# Phase 5 Alerting Rules
+# Task: P5-T-120
+# SLO-based alerts for Phase 5 services
+
+groups:
+  - name: phase5-availability
+    rules:
+      # Service Down Alerts
+      - alert: ChatbotDown
+        expr: up{job="chatbot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: chatbot
+        annotations:
+          summary: "Chatbot service is down"
+          description: "Chatbot service has been down for more than 1 minute."
+          runbook_url: "https://wiki.example.com/runbooks/chatbot-down"
+
+      - alert: TaskServiceDown
+        expr: up{job="task-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: task-service
+        annotations:
+          summary: "Task Service is down"
+          description: "Task Service has been down for more than 1 minute."
+
+      - alert: ReminderServiceDown
+        expr: up{job="reminder-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: reminder-service
+        annotations:
+          summary: "Reminder Service is down"
+          description: "Reminder Service has been down for more than 1 minute."
+
+      - alert: RecurrenceServiceDown
+        expr: up{job="recurrence-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: recurrence-service
+        annotations:
+          summary: "Recurrence Service is down"
+          description: "Recurrence Service has been down for more than 1 minute."
+
+      - alert: AuditServiceDown
+        expr: up{job="audit-service"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: audit-service
+        annotations:
+          summary: "Audit Service is down"
+          description: "Audit Service has been down for more than 1 minute."
+
+  - name: phase5-latency
+    rules:
+      # P95 Latency SLO: < 500ms
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{namespace="phase5-staging"}[5m])) by (le, job)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P95 latency on {{ $labels.job }}"
+          description: "P95 latency for {{ $labels.job }} is {{ $value | humanizeDuration }} (threshold: 500ms)"
+
+      # P99 Latency SLO: < 1s
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{namespace="phase5-staging"}[5m])) by (le, job)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical P99 latency on {{ $labels.job }}"
+          description: "P99 latency for {{ $labels.job }} is {{ $value | humanizeDuration }} (threshold: 1s)"
+
+  - name: phase5-error-rate
+    rules:
+      # Error Rate SLO: < 1%
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5..", namespace="phase5-staging"}[5m])) by (job)
+          /
+          sum(rate(http_requests_total{namespace="phase5-staging"}[5m])) by (job)
+          > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate for {{ $labels.job }} is {{ $value | humanizePercentage }} (threshold: 1%)"
+
+      # Critical Error Rate: > 5%
+      - alert: CriticalErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5..", namespace="phase5-staging"}[5m])) by (job)
+          /
+          sum(rate(http_requests_total{namespace="phase5-staging"}[5m])) by (job)
+          > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate on {{ $labels.job }}"
+          description: "Error rate for {{ $labels.job }} is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+  - name: phase5-resources
+    rules:
+      # CPU Usage > 80%
+      - alert: HighCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="phase5-staging"}[5m])) by (pod)
+          /
+          sum(container_spec_cpu_quota{namespace="phase5-staging"}/container_spec_cpu_period{namespace="phase5-staging"}) by (pod)
+          > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.pod }}"
+          description: "CPU usage for {{ $labels.pod }} is {{ $value | humanizePercentage }}"
+
+      # Memory Usage > 85%
+      - alert: HighMemoryUsage
+        expr: |
+          container_memory_working_set_bytes{namespace="phase5-staging"}
+          /
+          container_spec_memory_limit_bytes{namespace="phase5-staging"}
+          > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.pod }}"
+          description: "Memory usage for {{ $labels.pod }} is {{ $value | humanizePercentage }}"
+
+      # HPA at Max Replicas
+      - alert: HPAAtMaxReplicas
+        expr: |
+          kube_horizontalpodautoscaler_status_current_replicas{namespace="phase5-staging"}
+          ==
+          kube_horizontalpodautoscaler_spec_max_replicas{namespace="phase5-staging"}
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HPA {{ $labels.horizontalpodautoscaler }} at max replicas"
+          description: "HPA has been at max replicas for 15 minutes, may need scaling adjustment"
+
+  - name: phase5-database
+    rules:
+      # Database Query Latency > 100ms
+      - alert: HighDatabaseLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database query latency"
+          description: "P95 query latency for {{ $labels.operation }} is {{ $value | humanizeDuration }}"
+
+      # Connection Pool Exhaustion
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          db_connections_active / (db_connections_active + db_connections_idle) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Connection pool is {{ $value | humanizePercentage }} utilized"
+
+  - name: phase5-events
+    rules:
+      # Event Processing Backlog
+      - alert: EventProcessingBacklog
+        expr: |
+          sum(rate(events_consumed_total{status="success"}[5m])) by (topic)
+          <
+          sum(rate(events_published_total[5m])) by (topic) * 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Event processing falling behind on {{ $labels.topic }}"
+          description: "Consumers are processing less than 90% of published events"
+
+      # Event Processing Failures
+      - alert: EventProcessingFailures
+        expr: |
+          sum(rate(events_consumed_total{status="error"}[5m])) by (topic) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Event processing failures on {{ $labels.topic }}"
+          description: "Events are failing to process on topic {{ $labels.topic }}"
+
+      # Dead Letter Queue Growing
+      - alert: DeadLetterQueueGrowing
+        expr: |
+          increase(events_consumed_total{topic=~".*-dlq"}[1h]) > 10
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dead letter queue receiving messages"
+          description: "{{ $value }} messages sent to DLQ in the last hour"
+
+  - name: phase5-business
+    rules:
+      # No Tasks Created (potential issue)
+      - alert: NoTasksCreated
+        expr: |
+          sum(increase(tasks_created_total[1h])) == 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: "No tasks created in the last 2 hours"
+          description: "This may indicate an issue with the task creation flow"
+
+      # Reminder Trigger Failures
+      - alert: ReminderTriggerFailures
+        expr: |
+          increase(errors_total{type="reminder_trigger"}[15m]) > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple reminder trigger failures"
+          description: "{{ $value }} reminder trigger failures in the last 15 minutes"
+
+  - name: phase5-pod-health
+    rules:
+      # Pod Restart Rate
+      - alert: HighPodRestartRate
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="phase5-staging"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High restart rate for {{ $labels.pod }}"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+      # Pod Not Ready
+      - alert: PodNotReady
+        expr: |
+          kube_pod_status_ready{namespace="phase5-staging", condition="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod {{ $labels.pod }} is not ready"
+          description: "Pod has been in not-ready state for 5 minutes"

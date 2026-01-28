@@ -1,0 +1,396 @@
+# Network Policies for Service Isolation
+# Task: P5-T-116
+# Implements zero-trust network security within the cluster
+
+# Default deny all ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Default deny all egress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+---
+# Chatbot Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chatbot-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: chatbot
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow health checks from kubelet
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    # Allow to task-service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: task-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow to reminder-service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: reminder-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow to recurrence-service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: recurrence-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow to Dapr sidecar
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3500
+        - protocol: TCP
+          port: 50001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Task Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-service-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: task-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from chatbot
+    - from:
+        - podSelector:
+            matchLabels:
+              app: chatbot
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from Dapr sidecar
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3500
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres-task
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Dapr sidecar (for pub/sub)
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3500
+        - protocol: TCP
+          port: 50001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Reminder Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reminder-service-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: reminder-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from chatbot
+    - from:
+        - podSelector:
+            matchLabels:
+              app: chatbot
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from Dapr sidecar
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3500
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres-reminder
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Dapr sidecar
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3500
+        - protocol: TCP
+          port: 50001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Recurrence Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: recurrence-service-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: recurrence-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from chatbot
+    - from:
+        - podSelector:
+            matchLabels:
+              app: chatbot
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from Dapr sidecar
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3500
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres-recurrence
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to task-service (for creating next occurrence)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: task-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow to Dapr sidecar
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3500
+        - protocol: TCP
+          port: 50001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow Kubernetes API for leader election
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# Audit Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-service-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: audit-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from chatbot for queries
+    - from:
+        - podSelector:
+            matchLabels:
+              app: chatbot
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from Dapr sidecar (for consuming events)
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3500
+  egress:
+    # Allow to TimescaleDB
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres-audit
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Dapr sidecar
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3500
+        - protocol: TCP
+          port: 50001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# PostgreSQL Network Policies (allow only from respective services)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-task-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-task
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: task-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-reminder-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-reminder
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: reminder-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-recurrence-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-recurrence
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: recurrence-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-audit-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-audit
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: audit-service
+      ports:
+        - protocol: TCP
+          port: 5432

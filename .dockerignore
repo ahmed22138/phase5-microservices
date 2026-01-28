@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs (will be created in container)
+dist/
+build/
+
+# Source control
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+specs/
+history/
+.specify/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment (will be injected)
+.env*
+
+# Testing
+coverage/
+.nyc_output/
+**/*.test.ts
+**/*.spec.ts
+__tests__/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yaml
+.dockerignore
+
+# Kubernetes
+infrastructure/kubernetes/
+
+# Local development
+.dapr/

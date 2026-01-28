@@ -1,0 +1,9 @@
+# Development Namespace
+# Task: P5-T-105
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: phase5-dev
+  labels:
+    name: phase5-dev
+    environment: development

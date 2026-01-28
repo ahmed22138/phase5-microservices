@@ -1,0 +1,57 @@
+# Recurrence Service Leader Election Configuration
+# Task: P5-T-114
+# Uses Kubernetes lease-based leader election to ensure only one instance
+# runs the scheduler at a time, preventing duplicate task creation
+
+# Role for leader election
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: recurrence-service-leader-election
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "create", "update"]
+---
+# RoleBinding for leader election
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: recurrence-service-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: recurrence-service
+roleRef:
+  kind: Role
+  name: recurrence-service-leader-election
+  apiGroup: rbac.authorization.k8s.io
+---
+# ServiceAccount for recurrence-service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: recurrence-service
+---
+# Leader election lease
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  name: recurrence-service-leader
+spec:
+  holderIdentity: ""
+  leaseDurationSeconds: 15
+  acquireTime: null
+  renewTime: null
+  leaseTransitions: 0
+---
+# ConfigMap for leader election settings
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recurrence-service-leader-config
+data:
+  LEADER_ELECTION_ENABLED: "true"
+  LEADER_ELECTION_LEASE_NAME: "recurrence-service-leader"
+  LEADER_ELECTION_LEASE_DURATION: "15"
+  LEADER_ELECTION_RENEW_DEADLINE: "10"
+  LEADER_ELECTION_RETRY_PERIOD: "2"
