@@ -22,9 +22,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'recurrence-service', timestamp: new Date().toISOString() });
 });
 
-app.get('/ready', (_req, res) => {
-  // TODO: Add database connectivity check
-  res.json({ status: 'ready', service: 'recurrence-service', timestamp: new Date().toISOString() });
+app.get('/ready', async (_req, res) => {
+  try {
+    const pg = await import('pg');
+    const pool = new pg.default.Pool({ host: process.env.DB_HOST ?? 'localhost', port: parseInt(process.env.DB_PORT ?? '5432'), database: process.env.DB_NAME ?? 'recurrence_db', user: process.env.DB_USER ?? 'recurrence_user', password: process.env.DB_PASSWORD ?? 'recurrence_password' });
+    await pool.query('SELECT 1');
+    await pool.end();
+    res.json({ status: 'ready', service: 'recurrence-service', database: 'connected', timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: 'not_ready', service: 'recurrence-service', database: 'unavailable', timestamp: new Date().toISOString() });
+  }
 });
 
 // API routes

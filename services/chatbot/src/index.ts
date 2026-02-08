@@ -25,9 +25,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'chatbot', timestamp: new Date().toISOString() });
 });
 
-app.get('/ready', (_req, res) => {
-  // TODO: Add dependency checks (Dapr, Task Service connectivity)
-  res.json({ status: 'ready', service: 'chatbot', timestamp: new Date().toISOString() });
+app.get('/ready', async (_req, res) => {
+  const checks: Record<string, string> = {};
+  try {
+    const taskRes = await fetch(`${process.env.TASK_SERVICE_URL ?? 'http://localhost:3001'}/health`);
+    checks.taskService = taskRes.ok ? 'ok' : 'unavailable';
+  } catch {
+    checks.taskService = 'unavailable';
+  }
+  const allOk = Object.values(checks).every(v => v === 'ok');
+  res.status(allOk ? 200 : 503).json({ status: allOk ? 'ready' : 'degraded', service: 'chatbot', checks, timestamp: new Date().toISOString() });
 });
 
 // Initialize reminder triggered handler (P5-T-073)
