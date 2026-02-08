@@ -50,6 +50,9 @@ Thumbs.db
 # Kubernetes secrets
 *.secret.yaml
 secrets/
+# Allow Dapr secrets template and shared secrets utility
+!infrastructure/dapr/secrets/secrets.json
+!services/shared/secrets/
 kubeconfig*
 *.key
 *.crt

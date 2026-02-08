@@ -71,6 +71,15 @@ export class RecurrenceScheduler {
   }
 
   /**
+   * Process recurrences triggered via Dapr cron binding
+   * Called from the /cron-recurrence endpoint
+   */
+  async processViaBinding(): Promise<void> {
+    logger.info('Processing recurrences via Dapr cron binding');
+    await this.processRecurrences();
+  }
+
+  /**
    * Process due recurrence patterns
    */
   private async processRecurrences(): Promise<void> {

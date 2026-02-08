@@ -1,0 +1,32 @@
+# Dapr State Store Component (Redis)
+# Building Block: State Management
+# Used by chatbot for user session/conversation context
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: default
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: "localhost:6379"
+    - name: redisPassword
+      value: ""
+    - name: actorStateStore
+      value: "false"
+    # Key prefix strategy: app ID is prepended automatically
+    - name: keyPrefix
+      value: "name"
+    # Enable transactions
+    - name: enableTLS
+      value: "false"
+    # TTL for state entries (24 hours default)
+    - name: ttlInSeconds
+      value: "86400"
+scopes:
+  - chatbot
+  - task-service
+  - reminder-service
+  - recurrence-service

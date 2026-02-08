@@ -37,6 +37,19 @@ app.get('/ready', async (_req, res) => {
 // API routes
 app.use('/recurrence', recurrenceRouter);
 
+// Dapr Cron Input Binding endpoint (Building Block: Bindings)
+// Dapr calls this endpoint on the cron schedule defined in cron-recurrence.yaml
+app.post('/cron-recurrence', async (_req, res) => {
+  logger.info('Dapr cron binding triggered - processing due recurrences');
+  try {
+    await scheduler.processViaBinding();
+    res.json({ status: 'ok' });
+  } catch (error) {
+    logger.error({ error }, 'Cron binding handler failed');
+    res.status(500).json({ status: 'error' });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error({ error: err.message, stack: err.stack }, 'Unhandled error');

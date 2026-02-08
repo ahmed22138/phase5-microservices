@@ -54,6 +54,15 @@ export class ReminderScheduler {
   }
 
   /**
+   * Process reminders triggered via Dapr cron binding
+   * Called from the /cron-reminder endpoint
+   */
+  async processViaBinding(): Promise<void> {
+    logger.info('Processing reminders via Dapr cron binding');
+    await this.processReminders();
+  }
+
+  /**
    * Process due reminders
    */
   private async processReminders(): Promise<void> {

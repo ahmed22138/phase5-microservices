@@ -1,0 +1,18 @@
+# Dapr Cron Input Binding - Recurrence Scheduler
+# Building Block: Bindings (cron)
+# Triggers recurrence-service every 60 seconds to process due recurrence patterns
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-recurrence
+  namespace: default
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 60s"
+    - name: direction
+      value: "input"
+scopes:
+  - recurrence-service
